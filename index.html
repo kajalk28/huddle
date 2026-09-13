@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Huddle — peer drafting, demo</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2214%22%20fill%3D%22%234F5E62%22/%3E%0A%20%20%3Crect%20x%3D%2216%22%20y%3D%2214%22%20width%3D%2234%22%20height%3D%2238%22%20rx%3D%223%22%20fill%3D%22%23F2E9DE%22%20transform%3D%22rotate%28-7%2033%2033%29%22/%3E%0A%20%20%3Cpath%20d%3D%22M22%2046%20L44%2020%22%20stroke%3D%22%23DCB084%22%20stroke-width%3D%225%22%20stroke-linecap%3D%22round%22/%3E%0A%20%20%3Cpath%20d%3D%22M44%2020%20L50%2013%20L52%2019%20L46%2026%20Z%22%20fill%3D%22%23903729%22/%3E%0A%20%20%3Ccircle%20cx%3D%2222%22%20cy%3D%2246%22%20r%3D%222.4%22%20fill%3D%22%23903729%22/%3E%0A%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#4F5E62;
+    --ink-soft:#7C8B8E;
+    --paper:#E9DCCF;
+    --paper-raised:#FFFFFF;
+    --line:#DBC9B3;
+    --blue:#729598;
+    --blue-bg:#E4EDEC;
+    --gold:#DCB084;
+    --gold-deep:#A97B4E;
+    --coral:#903729;
+    --sage:#6E6C58;
+    --sage-bg:#EDEBE1;
+    --coral-bg:#F0DAD4;
+    --gold-bg:#F5E7D3;
+    --radius-s:4px;
+    --radius-m:8px;
+    --serif:'Source Serif 4', Georgia, serif;
+    --sans:'Space Grotesk', sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:var(--serif);
+    color:var(--ink);
+    background:var(--paper);
+    min-height:100vh;
+  }
+  button{font-family:var(--sans);cursor:pointer;}
+  input,textarea,select{font-family:var(--serif);}
+
+  /* ---------- layout shell ---------- */
+  .shell{
+    display:grid;
+    grid-template-columns:220px 1fr;
+    min-height:100vh;
+  }
+  .rail{
+    background:var(--ink);
+    color:#EDEAE0;
+    padding:28px 0 20px;
+    display:flex;
+    flex-direction:column;
+    position:sticky;
+    top:0;
+    height:100vh;
+  }
+  .brand{
+    font-family:var(--sans);
+    font-weight:700;
+    font-size:20px;
+    letter-spacing:-0.01em;
+    padding:0 22px 22px;
+    border-bottom:1px solid rgba(237,234,224,0.14);
+    margin-bottom:6px;
+  }
+  .brand span{color:inherit;}
+  nav.tabs{display:flex;flex-direction:column;margin-top:8px;}
+  .tab-btn{
+    all:unset;
+    font-family:var(--sans);
+    font-size:14.5px;
+    padding:11px 22px;
+    color:#C7C4B8;
+    border-left:3px solid transparent;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .tab-btn:hover{color:#EDEAE0;}
+  .tab-btn.active{
+    color:#EDEAE0;
+    background:rgba(237,234,224,0.06);
+    border-left:3px solid var(--gold);
+  }
+  .tab-btn .dot{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.55;flex:none;}
+  .rail-foot{
+    margin-top:auto;
+    padding:16px 22px 0;
+    border-top:1px solid rgba(237,234,224,0.14);
+    font-family:var(--sans);
+    font-size:12px;
+    color:#8F8C80;
+    line-height:1.6;
+  }
+
+  .main{
+    padding:34px 44px 80px;
+    max-width:1080px;
+  }
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:28px;
+    gap:18px;
+    flex-wrap:wrap;
+  }
+  .page-title{
+    font-family:var(--sans);
+    font-weight:600;
+    font-size:26px;
+    margin:0;
+  }
+  .page-sub{
+    font-family:var(--sans);
+    font-size:14px;
+    color:var(--ink-soft);
+    margin:4px 0 0;
+  }
+  .topbar-right{display:flex;align-items:center;gap:14px;}
+
+  .credit-pill{
+    font-family:var(--sans);
+    font-size:13px;
+    background:var(--gold-bg);
+    border:1px solid var(--gold);
+    color:var(--gold-deep);
+    padding:6px 12px;
+    border-radius:100px;
+    display:flex;align-items:center;gap:7px;
+    white-space:nowrap;
+  }
+
+  /* ---------- generic building blocks ---------- */
+  .card{
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    border-radius:var(--radius-m);
+    padding:22px 24px;
+  }
+  .stack{display:flex;flex-direction:column;gap:16px;}
+  .row{display:flex;gap:16px;}
+  .muted{color:var(--ink-soft);}
+  label.field-label{
+    font-family:var(--sans);
+    font-size:12.5px;
+    color:var(--ink-soft);
+    display:block;
+    margin-bottom:6px;
+  }
+  input[type=text], textarea, select{
+    width:100%;
+    border:1px solid var(--line);
+    border-radius:var(--radius-s);
+    padding:10px 12px;
+    font-size:15px;
+    background:#FDFCFA;
+    color:var(--ink);
+  }
+  textarea{resize:vertical;line-height:1.55;}
+  input:focus, textarea:focus, select:focus, button:focus-visible{
+    outline:2px solid var(--gold);
+    outline-offset:1px;
+  }
+  .btn{
+    all:unset;
+    font-family:var(--sans);
+    font-size:14px;
+    font-weight:500;
+    padding:10px 18px;
+    border-radius:var(--radius-s);
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    cursor:pointer;
+  }
+  .btn-primary{background:var(--ink);color:#EDEAE0;}
+  .btn-primary:hover{background:#2C3A52;}
+  .btn-primary:disabled{background:#B9B6AC;color:#F1EFE9;cursor:not-allowed;}
+  .btn-ghost{border:1px solid var(--line);color:var(--ink);background:transparent;}
+  .btn-ghost:hover{border-color:var(--ink-soft);}
+  .btn-gold{background:var(--gold);color:#2B2005;}
+  .btn-gold:hover{background:var(--gold-deep);color:#fff;}
+  .btn-sm{padding:6px 12px;font-size:12.5px;}
+
+  .chip{
+    font-family:var(--sans);
+    font-size:12.5px;
+    padding:6px 12px;
+    border-radius:100px;
+    border:1px solid var(--line);
+    background:var(--paper-raised);
+    color:var(--ink-soft);
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+  }
+  .chip.selected{
+    background:var(--blue);
+    color:#fff;
+    border-color:var(--blue);
+  }
+  .chip-wrap{display:flex;flex-wrap:wrap;gap:8px;}
+
+  .tag{
+    font-family:var(--sans);
+    font-size:11.5px;
+    padding:3px 9px;
+    border-radius:100px;
+    background:var(--paper);
+    border:1px solid var(--line);
+    color:var(--ink-soft);
+  }
+  .status{
+    font-family:var(--sans);
+    font-size:11.5px;
+    padding:3px 9px;
+    border-radius:100px;
+  }
+  .status.sage{background:var(--sage-bg);color:var(--sage);}
+  .status.gold{background:var(--gold-bg);color:var(--gold-deep);}
+  .status.coral{background:var(--coral-bg);color:var(--coral);}
+
+  hr.rule{border:none;border-top:1px solid var(--line);margin:6px 0;}
+
+  .locked-panel{
+    text-align:center;
+    padding:44px 30px;
+    border:1px dashed var(--line);
+    border-radius:var(--radius-m);
+    background:repeating-linear-gradient(135deg, rgba(0,0,0,0.015), rgba(0,0,0,0.015) 10px, transparent 10px, transparent 20px);
+  }
+  .locked-panel h3{font-family:var(--sans);margin:14px 0 6px;}
+
+  /* toast */
+  #toast{
+    position:fixed;
+    bottom:24px;
+    left:50%;
+    transform:translateX(-50%) translateY(20px);
+    background:var(--ink);
+    color:#EDEAE0;
+    font-family:var(--sans);
+    font-size:13.5px;
+    padding:12px 20px;
+    border-radius:var(--radius-m);
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .25s ease, transform .25s ease;
+    z-index:50;
+    border:1px solid var(--gold);
+  }
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  /* ---------- Submit tab ---------- */
+  .cycle-note{
+    font-family:var(--sans);
+    font-size:12.5px;
+    color:var(--ink-soft);
+    display:flex;
+    align-items:flex-start;
+    gap:8px;
+    background:var(--paper);
+    border-left:3px solid var(--gold);
+    padding:10px 14px;
+    border-radius:0 var(--radius-s) var(--radius-s) 0;
+  }
+
+  /* ---------- Review queue tab ---------- */
+  .paper-grid{
+    display:grid;
+    grid-template-columns:1fr 220px;
+    gap:22px;
+    align-items:start;
+  }
+  .paper-doc{
+    font-family:var(--serif);
+    font-size:16px;
+    line-height:1.75;
+  }
+  .paper-doc p{margin:0 0 14px;position:relative;padding:4px 6px;border-radius:3px;transition:background .15s;}
+  .paper-doc p:hover{background:var(--gold-bg);cursor:pointer;}
+  .paper-doc p.has-comment{background:var(--coral-bg);}
+  .margin-col{
+    position:sticky;
+    top:16px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .margin-note{
+    font-family:var(--sans);
+    font-size:12px;
+    background:#FDFCFA;
+    border:1px solid var(--line);
+    border-left:3px solid var(--coral);
+    border-radius:0 var(--radius-s) var(--radius-s) 0;
+    padding:8px 10px;
+    line-height:1.5;
+  }
+  .margin-note .who{color:var(--coral);font-weight:600;display:block;margin-bottom:2px;}
+  .margin-empty{
+    font-family:var(--sans);
+    font-size:12px;
+    color:var(--ink-soft);
+    padding:8px 10px;
+    border:1px dashed var(--line);
+    border-radius:var(--radius-s);
+  }
+  .comment-box{
+    display:flex;
+    gap:8px;
+    margin-top:2px;
+  }
+  .comment-box textarea{font-size:13px;min-height:56px;}
+
+  /* ---------- Editor tab ---------- */
+  .editor-grid{
+    display:grid;
+    grid-template-columns:1fr 260px;
+    gap:22px;
+    align-items:start;
+  }
+  .doc-page{
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    border-radius:var(--radius-m);
+    padding:30px 36px;
+    min-height:420px;
+    font-size:16px;
+    line-height:1.8;
+  }
+  .doc-page:focus-visible{outline:2px solid var(--gold);}
+  .doc-page u.flag{text-decoration:wavy underline var(--coral) 1.5px;text-underline-offset:3px;}
+  .doc-page u.flag2{text-decoration:wavy underline var(--gold-deep) 1.5px;text-underline-offset:3px;}
+  .suggestion{
+    font-family:var(--sans);
+    font-size:12.5px;
+    border:1px solid var(--line);
+    border-radius:var(--radius-s);
+    padding:9px 11px;
+    margin-bottom:8px;
+    background:#FDFCFA;
+  }
+  .suggestion .tag{margin-bottom:5px;display:inline-block;}
+
+  .study-panel{margin-top:26px;}
+  .block-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:8px 0;
+    border-bottom:1px solid var(--line);
+    font-family:var(--sans);
+    font-size:13.5px;
+  }
+  .block-row:last-child{border-bottom:none;}
+  .switch{
+    width:36px;height:20px;border-radius:100px;background:var(--line);
+    position:relative;border:none;flex:none;
+  }
+  .switch.on{background:var(--sage);}
+  .switch::after{
+    content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;
+    border-radius:50%;background:#fff;transition:left .15s;
+  }
+  .switch.on::after{left:18px;}
+  .sound-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+  .sound-chip{font-family:var(--sans);font-size:12.5px;padding:8px 13px;border-radius:var(--radius-s);border:1px solid var(--line);background:#FDFCFA;}
+  .sound-chip.playing{background:var(--sage-bg);border-color:var(--sage);color:var(--sage);}
+  .yt-row{display:flex;gap:8px;margin-top:12px;}
+
+  /* ---------- Community tab ---------- */
+  .profile-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(230px, 1fr));
+    gap:16px;
+  }
+  .profile-card{
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    border-radius:var(--radius-m);
+    padding:18px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .avatar{
+    width:38px;height:38px;border-radius:50%;
+    background:var(--ink);color:#EDEAE0;
+    font-family:var(--sans);font-weight:600;font-size:14px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .profile-head{display:flex;align-items:center;gap:10px;}
+  .profile-name{font-family:var(--sans);font-weight:600;font-size:14.5px;}
+  .profile-meta{font-family:var(--sans);font-size:11.5px;color:var(--ink-soft);}
+  .profile-tags{display:flex;flex-wrap:wrap;gap:6px;}
+
+  .msg-thread{display:flex;flex-direction:column;gap:8px;margin-top:10px;}
+  .msg{
+    max-width:75%;
+    font-family:var(--sans);
+    font-size:13px;
+    padding:8px 12px;
+    border-radius:10px;
+    line-height:1.5;
+  }
+  .msg.them{background:var(--paper);align-self:flex-start;border-bottom-left-radius:2px;}
+  .msg.me{background:var(--ink);color:#EDEAE0;align-self:flex-end;border-bottom-right-radius:2px;}
+
+  @media (max-width:820px){
+    .shell{grid-template-columns:1fr;}
+    .rail{position:relative;height:auto;flex-direction:row;overflow-x:auto;padding:14px;}
+    .brand{display:none;}
+    nav.tabs{flex-direction:row;}
+    .tab-btn{border-left:none;border-bottom:3px solid transparent;white-space:nowrap;}
+    .tab-btn.active{border-left:none;border-bottom:3px solid var(--gold);}
+    .rail-foot{display:none;}
+    .main{padding:24px 18px 60px;}
+    .paper-grid, .editor-grid{grid-template-columns:1fr;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important;}
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <aside class="rail">
+    <div class="brand">Huddle</div>
+    <nav class="tabs" id="tabs">
+      <button class="tab-btn active" data-tab="submit"><span class="dot"></span>Get help</button>
+      <button class="tab-btn" data-tab="review"><span class="dot"></span>Give help</button>
+      <button class="tab-btn" data-tab="inbox"><span class="dot"></span>Feedback inbox</button>
+      <button class="tab-btn" data-tab="editor"><span class="dot"></span>Write &amp; study</button>
+      <button class="tab-btn" data-tab="community"><span class="dot"></span>Community</button>
+    </nav>
+  </aside>
+
+  <main class="main">
+
+    <div class="topbar">
+      <div>
+        <h1 class="page-title" id="pageTitle">Get help</h1>
+        <p class="page-sub" id="pageSub">Submit a paper for peer notes.</p>
+      </div>
+      <div class="topbar-right">
+        <div class="credit-pill" title="Review one paper to earn a submission credit">
+          <span>&#9998;</span> <span id="creditCount">0</span> submission credit<span id="creditPlural">s</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= SUBMIT TAB ================= -->
+    <section class="tab-panel" id="panel-submit">
+      <div id="submitLocked" class="locked-panel" style="display:none;">
+        <div style="font-size:28px;">&#128274;</div>
+        <h3>Help someone first</h3>
+        <p class="muted" style="max-width:420px;margin:0 auto;">Huddle runs on a one-for-one cycle — review one paper to earn a credit, then use it to submit your own.</p>
+        <div style="margin-top:16px;">
+          <button class="btn btn-gold" onclick="goTo('review')">Find a paper to review</button>
+        </div>
+      </div>
+
+      <div id="submitForm" class="stack" style="max-width:640px;">
+        <div class="cycle-note">
+          <span>&#8635;</span>
+          <span>You have <strong id="creditNoteCount">0</strong> submission credit(s) available. Each review you complete earns one more.</span>
+        </div>
+        <div class="card stack">
+          <div>
+            <label class="field-label">Title</label>
+            <input type="text" id="subTitle" placeholder="e.g. Why the Bell Jar still resonates">
+          </div>
+          <div class="row">
+            <div style="flex:1;">
+              <label class="field-label">Category</label>
+              <select id="subCategory">
+                <option>Research paper</option>
+                <option>Scientific essay</option>
+                <option>Poetry</option>
+                <option>Literature essay</option>
+                <option>AP Lang / Lit essay</option>
+                <option>College essay</option>
+                <option>College supplemental</option>
+                <option>Resume</option>
+                <option>Job cover letter</option>
+                <option>Internship cover letter</option>
+              </select>
+            </div>
+            <div style="flex:1;">
+              <label class="field-label">Daily submissions used</label>
+              <input type="text" disabled value="1 of 2 today" id="dailyLimitDisplay">
+            </div>
+          </div>
+          <div>
+            <label class="field-label">What kind of help do you want?</label>
+            <div class="chip-wrap" id="helpTypeChips">
+              <button class="chip selected" data-val="ideas">Ideas</button>
+              <button class="chip" data-val="notes">Notes</button>
+              <button class="chip" data-val="thoughts">General thoughts</button>
+              <button class="chip" data-val="line">Line edits</button>
+            </div>
+          </div>
+          <div>
+            <label class="field-label">Instructions for your reviewer</label>
+            <textarea rows="3" id="subInstructions" placeholder="e.g. I'm not sure my thesis is specific enough — tell me if it feels too broad."></textarea>
+          </div>
+          <div>
+            <label class="field-label">Paste your draft</label>
+            <textarea rows="6" id="subDraft" placeholder="Paste or write your draft here...">The Bell Jar opens with a strange sense of detachment, as if Esther is watching her own life from behind glass...</textarea>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span class="muted" style="font-family:var(--sans);font-size:12px;">Personal details in resumes and cover letters are automatically hidden from reviewers.</span>
+            <button class="btn btn-primary" onclick="submitPaper()">Submit for review</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= REVIEW TAB ================= -->
+    <section class="tab-panel" id="panel-review" style="display:none;">
+      <div class="stack">
+        <div class="card">
+          <label class="field-label">What do you feel like reading today?</label>
+          <div class="chip-wrap" id="filterChips">
+            <button class="chip" data-val="Research paper">Research papers</button>
+            <button class="chip" data-val="Poetry">Poetry</button>
+            <button class="chip" data-val="Literature essay">Literature essays</button>
+            <button class="chip" data-val="College essay">College essays</button>
+            <button class="chip" data-val="Resume">Resumes</button>
+            <button class="chip" data-val="Job cover letter">Cover letters</button>
+          </div>
+          <div style="margin-top:14px;">
+            <button class="btn btn-primary" onclick="findPaper()">Find a paper to review</button>
+          </div>
+          <p class="muted" id="assignNote" style="font-family:var(--sans);font-size:12.5px;margin-top:10px;display:none;"></p>
+        </div>
+
+        <div id="reviewPaperCard" style="display:none;"></div>
+      </div>
+    </section>
+
+    <!-- ================= INBOX TAB ================= -->
+    <section class="tab-panel" id="panel-inbox" style="display:none;">
+      <div class="paper-grid">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <div>
+              <h3 style="margin:0 0 4px;font-family:var(--sans);">Why the Bell Jar still resonates</h3>
+              <span class="tag">Literature essay</span>
+            </div>
+            <span class="status sage">2 reviewers responded</span>
+          </div>
+          <hr class="rule">
+          <div class="paper-doc">
+            <p class="has-comment">The Bell Jar opens with a strange sense of detachment, as if Esther is watching her own life from behind glass.</p>
+            <p class="has-comment">This distance is not just a stylistic choice — it mirrors the numbness that Plath uses to describe depression from the inside.</p>
+            <p>By the second chapter, the reader starts to understand that Esther's outward achievements only sharpen her internal disconnection.</p>
+          </div>
+        </div>
+        <div class="margin-col">
+          <div class="margin-note"><span class="who">quietfox92</span>Nice opening — I'd love one more sentence naming why "glass" specifically, vs. just "distance."</div>
+          <div class="margin-note"><span class="who">marlowe_writes</span>Good link to depression here. Careful not to over-explain the metaphor before the reader meets Esther.</div>
+          <div style="margin-top:6px;">
+            <button class="btn btn-ghost btn-sm" onclick="openThread()">Message marlowe_writes</button>
+          </div>
+          <div id="threadBox" style="display:none;">
+            <div class="msg-thread">
+              <div class="msg them">Happy to look at your revised thesis if you post it back to the queue!</div>
+              <div class="msg me">Thanks — I'll tighten the glass metaphor and resubmit.</div>
+            </div>
+            <div class="comment-box">
+              <textarea placeholder="Reply..."></textarea>
+              <button class="btn btn-primary btn-sm" onclick="toast('Message sent')">Send</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= EDITOR TAB ================= -->
+    <section class="tab-panel" id="panel-editor" style="display:none;">
+      <div class="editor-grid">
+        <div>
+          <div class="doc-page" contenteditable="true" id="docPage">
+            <p>Climate migration is <u class="flag">reshaping</u> coastal economies faster then most policy frameworks can adapt to. In the next thirty years, an estimated 200 million people <u class="flag2">is</u> expected to be displaced by rising sea levels alone.</p>
+            <p>This paper argues that regional infrastructure planning — not national policy — will determine how well cities absorb this shift.</p>
+          </div>
+          <div class="row" style="margin-top:14px;">
+            <button class="btn btn-ghost" onclick="runPlagiarism()">Check originality</button>
+            <button class="btn btn-ghost" onclick="toggleStudy()">Open study mode</button>
+          </div>
+          <div id="plagResult" style="display:none;margin-top:14px;" class="card">
+            <strong style="font-family:var(--sans);font-size:14px;">Originality: 96%</strong>
+            <p class="muted" style="font-family:var(--sans);font-size:12.5px;margin:6px 0 0;">One matched phrase found in a public source — likely a common turn of phrase, not a citation issue.</p>
+          </div>
+        </div>
+        <div>
+          <div class="card">
+            <strong style="font-family:var(--sans);font-size:13.5px;">AI suggestions</strong>
+            <div style="margin-top:12px;">
+              <div class="suggestion"><span class="tag">Grammar</span><div>"faster then" should be "faster than."</div></div>
+              <div class="suggestion"><span class="tag">Agreement</span><div>"200 million people is" should be "200 million people are."</div></div>
+              <div class="suggestion"><span class="tag">Clarity</span><div>Consider naming which regions you mean by "coastal economies" in your opening line.</div></div>
+            </div>
+          </div>
+
+          <div id="studyPanel" class="card study-panel" style="display:none;">
+            <strong style="font-family:var(--sans);font-size:13.5px;">Study mode</strong>
+            <p class="muted" style="font-family:var(--sans);font-size:12px;margin:4px 0 12px;">Block distracting tabs while you write.</p>
+            <div class="block-row"><span>Instagram</span><button class="switch on" onclick="toggleSwitch(this)"></button></div>
+            <div class="block-row"><span>TikTok</span><button class="switch on" onclick="toggleSwitch(this)"></button></div>
+            <div class="block-row"><span>YouTube</span><button class="switch on" onclick="toggleSwitch(this)"></button></div>
+            <div class="block-row"><span>News sites</span><button class="switch" onclick="toggleSwitch(this)"></button></div>
+
+            <div style="margin-top:14px;">
+              <strong style="font-family:var(--sans);font-size:12.5px;">Ambient sound</strong>
+              <div class="sound-row">
+                <button class="sound-chip" onclick="playSound(this,'Rain')">Rain</button>
+                <button class="sound-chip" onclick="playSound(this,'Café')">Café</button>
+                <button class="sound-chip" onclick="playSound(this,'Lo-fi')">Lo-fi</button>
+              </div>
+            </div>
+
+            <div style="margin-top:14px;">
+              <strong style="font-family:var(--sans);font-size:12.5px;">Play a YouTube playlist</strong>
+              <p class="muted" style="font-family:var(--sans);font-size:11.5px;margin:4px 0 8px;">Search by name — audio keeps playing even with YouTube blocked as a distraction site.</p>
+              <div class="yt-row">
+                <input type="text" id="ytSearch" placeholder="e.g. deep focus piano" style="flex:1;">
+                <button class="btn btn-gold btn-sm" onclick="searchYt()">Play</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= COMMUNITY TAB ================= -->
+    <section class="tab-panel" id="panel-community" style="display:none;">
+      <div class="profile-grid" id="profileGrid"></div>
+    </section>
+
+  </main>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ---------------- state ---------------- */
+let credits = 0;
+let helpType = 'ideas';
+let selectedFilters = new Set();
+
+const titles = {
+  submit:['Get help','Submit a paper for peer notes.'],
+  review:['Give help','Review a paper before you can submit your own.'],
+  inbox:['Feedback inbox','See what reviewers said about your drafts.'],
+  editor:['Write & study','Draft, check, and focus in one place.'],
+  community:['Community','Connect with writers whose style matches yours.']
+};
+
+const samplePapers = [
+  {title:'Should cities subsidize public transit fares?', category:'Research paper', author:'delfinowrites',
+   text:['This paper examines whether fare-free transit measurably increases ridership among low-income commuters.',
+         'Drawing on five city case studies, it argues that the effect is real but smaller than advocates claim.']},
+  {title:'a small kitchen at 2am', category:'Poetry', author:'plainlanguage_j', text:[
+        'the fridge hums like it is trying to say something kind,',
+        'and I let the milk go warm on the counter because leaving feels rude tonight.']},
+  {title:'Common App: the summer I fixed bikes', category:'College essay', author:'marlowe_writes', text:[
+        'I did not expect a broken derailleur to teach me anything about patience, but the shop owner made sure it did.',
+        'By August I could true a wheel blindfolded, and I finally understood why my dad never rushed a repair.']},
+  {title:'Resume — rising junior, seeking research internship', category:'Resume', author:'[hidden]', text:[
+        'Objective: seeking a summer research assistant role in environmental science.',
+        'Experience: two years on the school\'s water-quality monitoring team, presented findings at regional science fair.']}
+];
+
+/* ---------------- tab switching ---------------- */
+function goTo(tab){
+  document.querySelectorAll('.tab-panel').forEach(p=>p.style.display='none');
+  document.getElementById('panel-'+tab).style.display='block';
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
+  document.getElementById('pageTitle').textContent = titles[tab][0];
+  document.getElementById('pageSub').textContent = titles[tab][1];
+  if(tab==='community' && !document.getElementById('profileGrid').dataset.loaded){
+    renderProfiles();
+  }
+}
+document.getElementById('tabs').addEventListener('click', e=>{
+  const btn = e.target.closest('.tab-btn');
+  if(btn) goTo(btn.dataset.tab);
+});
+
+/* ---------------- credits / gating ---------------- */
+function refreshCredits(){
+  document.getElementById('creditCount').textContent = credits;
+  document.getElementById('creditNoteCount').textContent = credits;
+  document.getElementById('creditPlural').textContent = credits===1?'':'s';
+  document.getElementById('submitLocked').style.display = credits>0 ? 'none' : 'block';
+  document.getElementById('submitForm').style.display = credits>0 ? 'flex' : 'none';
+}
+refreshCredits();
+
+/* ---------------- toast ---------------- */
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(()=>t.classList.remove('show'), 2600);
+}
+
+/* ---------------- submit tab ---------------- */
+document.getElementById('helpTypeChips').addEventListener('click', e=>{
+  const chip = e.target.closest('.chip');
+  if(!chip) return;
+  document.querySelectorAll('#helpTypeChips .chip').forEach(c=>c.classList.remove('selected'));
+  chip.classList.add('selected');
+  helpType = chip.dataset.val;
+});
+
+function submitPaper(){
+  if(credits<=0){ toast('Review a paper first to earn a credit.'); return; }
+  const title = document.getElementById('subTitle').value || '(untitled draft)';
+  credits -= 1;
+  refreshCredits();
+  toast('"' + title + '" submitted for peer review.');
+  document.getElementById('subTitle').value='';
+}
+
+/* ---------------- review tab ---------------- */
+document.getElementById('filterChips').addEventListener('click', e=>{
+  const chip = e.target.closest('.chip');
+  if(!chip) return;
+  chip.classList.toggle('selected');
+  if(chip.classList.contains('selected')) selectedFilters.add(chip.dataset.val);
+  else selectedFilters.delete(chip.dataset.val);
+});
+
+function findPaper(){
+  let pool = samplePapers.filter(p=>selectedFilters.size===0 || selectedFilters.has(p.category));
+  let assigned = false;
+  if(pool.length===0){ pool = samplePapers; assigned = true; }
+  const paper = pool[Math.floor(Math.random()*pool.length)];
+  renderReviewPaper(paper);
+  const note = document.getElementById('assignNote');
+  if(assigned){
+    note.style.display='block';
+    note.textContent = 'Nothing in your chosen categories needs a reviewer right now, so we assigned something similar — every paper has to get checked.';
+  } else {
+    note.style.display='none';
+  }
+}
+
+function renderReviewPaper(paper){
+  const card = document.getElementById('reviewPaperCard');
+  card.style.display='block';
+  card.innerHTML = `
+    <div class="paper-grid">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div>
+            <h3 style="margin:0 0 4px;font-family:var(--sans);">${paper.title}</h3>
+            <span class="tag">${paper.category}</span>
+            <span class="tag">by ${paper.author}</span>
+          </div>
+        </div>
+        <hr class="rule">
+        <div class="paper-doc" id="paperDocBody">
+          ${paper.text.map((t,i)=>`<p data-idx="${i}">${t}</p>`).join('')}
+        </div>
+        <hr class="rule">
+        <label style="display:flex;align-items:center;gap:8px;font-family:var(--sans);font-size:13px;">
+          <input type="checkbox" id="availToggle"> Available to be messaged for follow-up questions
+        </label>
+        <div style="margin-top:12px;text-align:right;">
+          <button class="btn btn-primary" onclick="finishReview()">Submit review</button>
+        </div>
+      </div>
+      <div class="margin-col" id="marginCol">
+        <div class="margin-empty">Click a paragraph to leave a note.</div>
+      </div>
+    </div>
+  `;
+  document.getElementById('paperDocBody').querySelectorAll('p').forEach(p=>{
+    p.addEventListener('click', ()=>openCommentBox(p));
+  });
+}
+
+function openCommentBox(p){
+  if(p.querySelector('.comment-box')) return;
+  const box = document.createElement('div');
+  box.className='comment-box';
+  box.innerHTML = `<textarea placeholder="Add a note..."></textarea><button class="btn btn-primary btn-sm">Add</button>`;
+  box.querySelector('button').addEventListener('click', (ev)=>{
+    ev.stopPropagation();
+    const val = box.querySelector('textarea').value.trim();
+    if(!val) return;
+    p.classList.add('has-comment');
+    box.remove();
+    addMarginNote(val);
+  });
+  box.addEventListener('click', ev=>ev.stopPropagation());
+  p.appendChild(box);
+}
+
+function addMarginNote(text){
+  const col = document.getElementById('marginCol');
+  const empty = col.querySelector('.margin-empty');
+  if(empty) empty.remove();
+  const note = document.createElement('div');
+  note.className='margin-note';
+  note.innerHTML = `<span class="who">you</span>${text}`;
+  col.appendChild(note);
+}
+
+function finishReview(){
+  credits += 1;
+  refreshCredits();
+  toast('Review submitted — you earned 1 submission credit.');
+  document.getElementById('reviewPaperCard').style.display='none';
+  document.getElementById('assignNote').style.display='none';
+}
+
+/* ---------------- inbox tab ---------------- */
+function openThread(){
+  document.getElementById('threadBox').style.display='block';
+}
+
+/* ---------------- editor tab ---------------- */
+function runPlagiarism(){
+  document.getElementById('plagResult').style.display='block';
+  toast('Originality check complete.');
+}
+function toggleStudy(){
+  const panel = document.getElementById('studyPanel');
+  panel.style.display = panel.style.display==='block' ? 'none' : 'block';
+}
+function toggleSwitch(btn){
+  btn.classList.toggle('on');
+}
+function playSound(btn, name){
+  document.querySelectorAll('.sound-chip').forEach(c=>c.classList.remove('playing'));
+  btn.classList.add('playing');
+  toast('Now playing: ' + name + ' (demo — no real audio)');
+}
+function searchYt(){
+  const q = document.getElementById('ytSearch').value || 'deep focus';
+  toast('Playing "' + q + '" — audio continues even with YouTube blocked.');
+}
+
+/* ---------------- community tab ---------------- */
+const profiles = [
+  {name:'quietfox92', tags:['Literary analysis','Close reading'], initials:'QF'},
+  {name:'marlowe_writes', tags:['College essays','Narrative voice'], initials:'MW'},
+  {name:'delfinowrites', tags:['Research papers','Policy'], initials:'DW'},
+  {name:'plainlanguage_j', tags:['Poetry','Minimalism'], initials:'PJ'},
+  {name:'northbound_k', tags:['Cover letters','Concision'], initials:'NK'},
+  {name:'ceres_edits', tags:['AP Lit','Thesis sharpening'], initials:'CE'}
+];
+function renderProfiles(){
+  const grid = document.getElementById('profileGrid');
+  grid.dataset.loaded='1';
+  grid.innerHTML = profiles.map(p=>`
+    <div class="profile-card">
+      <div class="profile-head">
+        <div class="avatar">${p.initials}</div>
+        <div>
+          <div class="profile-name">${p.name}</div>
+          <div class="profile-meta">Matched on writing style</div>
+        </div>
+      </div>
+      <div class="profile-tags">${p.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+      <button class="btn btn-ghost btn-sm" onclick="toggleConnect(this)">Connect</button>
+    </div>
+  `).join('');
+}
+function toggleConnect(btn){
+  const connected = btn.textContent.trim()==='Connected';
+  btn.textContent = connected ? 'Connect' : 'Connected';
+  btn.classList.toggle('btn-ghost', connected);
+  btn.classList.toggle('btn-primary', !connected);
+}
+
+</script>
+</body>
+</html>
